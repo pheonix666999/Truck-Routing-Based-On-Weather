@@ -1,0 +1,25 @@
+
+# Environment variables and secrets
+.env
+.env.*
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Django local database
+db.sqlite3
+
+# Frontend
+node_modules/
+dist/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
