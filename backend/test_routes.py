@@ -1,121 +1,61 @@
 
-import os
-import django
-import polyline
 from unittest.mock import patch
 
-# Initialize Django
-os.environ.setdefault(
-    "DJANGO_SETTINGS_MODULE",
-    "config.settings"
-)
+from routing.geometry import generate_check_points
+from routing.eta import calculate_checkpoint_etas
 
-django.setup()
-
-from routing.services import get_truck_routes
-from routing.geometry import distance_miles, generate_check_points
-
-
-# ==========================================================
-# TEST 1: OUR 32-MILE MATHEMATICAL EXAMPLE
-# ==========================================================
 
 def test_example_route():
 
-    print("\nTESTING OUR 32-MILE EXAMPLE")
-    print("=" * 45)
-
-    # The five example GPS points: A, B, C, D, E
-    #
-    # B, C, D and E use the illustrative coordinates
-    # from our earlier calculations.
-    #
-    # A is an additional illustrative starting point.
+    # -----------------------------------------
+    # STEP 1: Our example GPS coordinates
+    # -----------------------------------------
 
     coordinates = [
-        (40.940, -87.080),  # A - mile 0
-        (41.000, -87.000),  # B - mile 6.4
-        (41.080, -86.900),  # C - mile 14.9333
-        (41.160, -86.800),  # D - mile 23.4667
-        (41.240, -86.700),  # E - mile 32
+        (40.940, -87.080),  # A
+        (41.000, -87.000),  # B
+        (41.080, -86.900),  # C
+        (41.160, -86.800),  # D
+        (41.240, -86.700),  # E
     ]
 
-    # These are the segment distances from our example.
-    #
-    # A -> B = 6 miles
-    # B -> C = 8 miles
-    # C -> D = 8 miles
-    # D -> E = 8 miles
-    #
-    # Total geometry distance = 30 miles
+    # GPS distance = 6 + 8 + 8 + 8 = 30 miles
+    # API distance = 32 miles
+    # Scale = 32 / 30 = 1.0666667
 
-    example_segment_lengths = [6.0, 8.0, 8.0, 8.0]
-
-    # API reports 32 miles, so:
-    #
-    # scale = 32 / 30 = 1.0666667
+    segment_lengths = [6.0, 8.0, 8.0, 8.0]
 
     route_distance = 32.0
-    checkpoint_interval = 10
+    interval_miles = 10
 
-    print(f"Geometry distance: {sum(example_segment_lengths)} miles")
-    print(f"API distance: {route_distance} miles")
-    print(f"Scale: {route_distance / sum(example_segment_lengths):.7f}")
-    print(f"Checkpoint interval: {checkpoint_interval} miles")
+    # Departure at 8:00 AM
+    departure_time = "2026-11-15T08:00:00-06:00"
 
-    # IMPORTANT:
-    #
-    # Our example GPS coordinates are illustrative.
-    # Their real Haversine distances do not equal
-    # exactly 6, 8, 8 and 8 miles.
-    #
-    # patch() temporarily makes distance_miles()
-    # return our example distances instead.
-    #
-    # This lets us test the exact calculations
-    # we worked through together.
+    # Total travel time = 64 minutes = 3840 seconds
+    route_duration_seconds = 64 * 60
 
+    # -----------------------------------------
+    # STEP 2: Generate weather checkpoints
+    # -----------------------------------------
+
+    # Replace Haversine distances temporarily
+    # with our known example distances.
     with patch(
         "routing.geometry.distance_miles",
-        side_effect=example_segment_lengths
+        side_effect=segment_lengths
     ):
-
         checkpoints = generate_check_points(
             coordinates=coordinates,
-            interval_miles=checkpoint_interval,
+            interval_miles=interval_miles,
             route_distance_miles=route_distance
         )
 
-    print("\nEXPECTED CHECKPOINT MILES:")
-    print([0, 10, 20, 30, 32])
-
-    # Your function is currently incomplete.
-    if checkpoints is None:
-        print("\nFunction is not finished yet.")
-        print("Complete generate_check_points() and return checkpoints.")
-        return
-
-    print("\nACTUAL CHECKPOINTS:")
-    print("-" * 45)
-
-    for checkpoint in checkpoints:
-        print(
-            f"Mile: {checkpoint['mile']:.2f} | "
-            f"Lat: {checkpoint['lat']:.7f} | "
-            f"Lon: {checkpoint['lon']:.7f}"
-        )
-
-    # Check whether the function returned
-    # the correct checkpoint distances.
-
+    # Expected checkpoint positions
     expected_miles = [0, 10, 20, 30, 32]
-    actual_miles = [point["mile"] for point in checkpoints]
 
-    assert actual_miles == expected_miles, (
-        f"Expected {expected_miles}, got {actual_miles}"
-    )
+    assert [cp["mile"] for cp in checkpoints] == expected_miles
 
-    # Check the GPS positions calculated in our example.
+    # Check our calculated GPS coordinates.
     expected_positions = [
         (40.9400000, -87.0800000),
         (41.0337500, -86.9578125),
@@ -124,95 +64,60 @@ def test_example_route():
         (41.2400000, -86.7000000),
     ]
 
-    for checkpoint, expected in zip(checkpoints, expected_positions):
-        assert abs(checkpoint["lat"] - expected[0]) < 0.000001
-        assert abs(checkpoint["lon"] - expected[1]) < 0.000001
+    for cp, (lat, lon) in zip(checkpoints, expected_positions):
+        assert abs(cp["lat"] - lat) < 0.000001
+        assert abs(cp["lon"] - lon) < 0.000001
 
-    print("\nSUCCESS: All example checkpoints are correct!")
+    # -----------------------------------------
+    # STEP 3: Calculate checkpoint ETAs
+    # -----------------------------------------
 
+    checkpoints_with_etas = calculate_checkpoint_etas(
+        checkpoints=checkpoints,
+        departure_time=departure_time,
+        route_duration_seconds=route_duration_seconds,
+        route_distance_miles=route_distance
+    )
 
-# ==========================================================
-# TEST 2: REAL ROUTES FROM VALHALLA API
-# ==========================================================
+    # -----------------------------------------
+    # STEP 4: Verify arrival times
+    # -----------------------------------------
 
-def test_routes():
+    expected_times = [
+        "08:00:00",
+        "08:20:00",
+        "08:40:00",
+        "09:00:00",
+        "09:04:00",
+    ]
 
-    data = get_truck_routes()
+    actual_times = [
+        cp["eta"][11:19]
+        for cp in checkpoints_with_etas
+    ]
 
-    routes = [data["trip"]]
+    assert actual_times == expected_times, (
+        f"Expected {expected_times}, got {actual_times}"
+    )
 
-    for alternate in data.get("alternates", []):
-        routes.append(alternate["trip"])
+    # -----------------------------------------
+    # STEP 5: Print final results
+    # -----------------------------------------
 
-    print(f"\nTotal routes found: {len(routes)}")
-    print("-" * 40)
+    print("\n32-MILE ROUTE TEST")
+    print("-" * 65)
 
-    for index, route in enumerate(routes, start=1):
-
-        summary = route["summary"]
-
-        distance = summary["length"]
-        duration_minutes = summary["time"] / 60
-
-        # Decode GPS coordinates from every route leg
-        coordinates = []
-
-        for leg in route["legs"]:
-            leg_coordinates = polyline.decode(
-                leg["shape"],
-                precision=6
-            )
-
-            if coordinates:
-                leg_coordinates = leg_coordinates[1:]
-
-            coordinates.extend(leg_coordinates)
-
-        # Calculate total geometry distance
-        geometry_distance = 0
-
-        for i in range(len(coordinates) - 1):
-            geometry_distance += distance_miles(
-                coordinates[i],
-                coordinates[i + 1]
-            )
-
-        print(f"\nRoute {index}")
-        print(f"API distance: {distance:.2f} miles")
-        print(f"Calculated distance: {geometry_distance:.2f} miles")
-        print(f"Duration: {duration_minutes:.1f} minutes")
-        print(f"Total GPS points: {len(coordinates)}")
-
-        # Generate real checkpoints
-        checkpoints = generate_check_points(
-            coordinates=coordinates,
-            interval_miles=25,
-            route_distance_miles=distance
+    for cp in checkpoints_with_etas:
+        print(
+            f"Mile {cp['mile']:5.1f} | "
+            f"Lat {cp['lat']:.6f} | "
+            f"Lon {cp['lon']:.6f} | "
+            f"ETA {cp['eta'][11:19]}"
         )
 
-        if checkpoints is None:
-            print("Checkpoint function is incomplete.")
-        else:
-            print(f"Total checkpoints: {len(checkpoints)}")
+    print("-" * 65)
+    print("SUCCESS: All checkpoints and ETAs are correct!")
 
-            for checkpoint in checkpoints:
-                print(
-                    f"Mile: {checkpoint['mile']:.2f} | "
-                    f"Lat: {checkpoint['lat']:.6f} | "
-                    f"Lon: {checkpoint['lon']:.6f}"
-                )
-
-        print("-" * 40)
-
-
-# ==========================================================
-# CHOOSE WHICH TEST TO RUN
-# ==========================================================
 
 if __name__ == "__main__":
-
-    # Run our mathematical example
     test_example_route()
-
-    # Uncomment this when you want to test real API routes
-    # test_routes()
