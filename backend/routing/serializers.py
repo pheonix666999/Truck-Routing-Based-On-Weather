@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from decimal import Decimal
+
 
 class TripSerializer(serializers.Serializer):
     origin = serializers.CharField(max_length=200)
@@ -7,7 +9,7 @@ class TripSerializer(serializers.Serializer):
     load_weight = serializers.DecimalField(
         max_digits = 10,
         decimal_places=2,
-        min_value=0.01
+        min_value=Decimal("0.01")
     )
     checkpoint_interval=serializers.ChoiceField(
         choices=[10, 25, 50],

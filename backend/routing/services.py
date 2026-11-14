@@ -1,7 +1,7 @@
 import requests
 from django.conf import settings
 
-def get_truck_routes():
+def get_truck_routes(origin, destination):
     url = "https://api.simplerouting.io/valhalla/route"
 
     headers = {
@@ -10,8 +10,8 @@ def get_truck_routes():
 
     payload = {
         "locations": [
-            {"lat": 41.8781, "lon": -87.6298},
-            {"lat": 42.3314, "lon": -83.0458}
+            origin,
+            destination
         ],
         "costing": "truck",
         "units": "miles",

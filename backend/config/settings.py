@@ -18,6 +18,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / ".env")
 SIMPLE_ROUTING_API_KEY = os.getenv("SIMPLE_ROUTING_API_KEY")
+NOMINATIM_USER_AGENT = os.getenv("NOMINATIM_USER_AGENT")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
