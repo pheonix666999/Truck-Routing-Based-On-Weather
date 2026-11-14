@@ -40,6 +40,9 @@ def calculate_risk_miles(checkpoints):
     }
 
 def rank_routes(analyzed_routes):
+    if not analyzed_routes:
+        raise ValueError("No routes are available to rank")
+
     scored_routes = []
     for route in analyzed_routes:
         risk_summary = calculate_risk_miles(
@@ -52,30 +55,26 @@ def rank_routes(analyzed_routes):
             **risk_summary
         })
 
-        safe_candidates = [
-            route for route in scored_routes
-            if not route["contains_no_travel"]
-        ]
+    safe_candidates = [
+        route for route in scored_routes
+        if not route["contains_no_travel"]
+    ]
 
-        excluded_routes = [
-            route for route in scored_routes
-            if route["contains_no_travel"]
-        ]
+    excluded_routes = [
+        route for route in scored_routes
+        if route["contains_no_travel"]
+    ]
 
-        safe_candidates.sort(
-            key=lambda route: (
-                route["risk_miles"]["Severe"],
-                route["risk_miles"]["High"],
-                route["average_risk"],
-                route["duration_seconds"]
-            )
+    safe_candidates.sort(
+        key=lambda route: (
+            route["risk_miles"]["Severe"],
+            route["risk_miles"]["High"],
+            route["average_risk"],
+            route["duration_seconds"]
         )
+    )
 
-        recommended = (
-            safe_candidates[0]
-            if safe_candidates
-            else None
-        )
+    recommended = safe_candidates[0] if safe_candidates else None
 
     return {
         "recommended_route": recommended,

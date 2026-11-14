@@ -1,0 +1,616 @@
+# ROLE: Senior Frontend Engineer, UI/UX Designer and Full-Stack Integration Specialist
+
+You are a principal-level React engineer, experienced UI/UX designer, and geospatial application developer.
+
+Your task is to **take complete ownership of building, integrating, testing, and polishing the entire frontend** of my Weather-Aware Truck Routing application.
+
+This is a technical take-home assessment for a Full Stack Developer position. The finished application must demonstrate exceptional frontend engineering, strong design judgment, accurate data visualization, reliable API integration, and production-quality code.
+
+**Do not merely provide recommendations, code snippets, or implementation instructions. Make the actual changes to the repository, run the application, test the implementation, identify and fix problems, and deliver a finished frontend.**
+
+## 1. Project context
+
+Project root:
+
+`H:\PROJECTS\Weather-Routing`
+
+Repository structure:
+
+- `backend/` — Existing Django REST Framework application
+- `frontend/` — Existing React + Vite application
+
+The backend has already been developed and tested.
+
+It currently supports:
+
+- Truck routing through Valhalla/Simple Routing
+- Up to three route alternatives
+- GPS polyline decoding
+- Checkpoint generation at 10, 25, or 50-mile intervals
+- Checkpoint ETAs based on distance and departure time
+- Hourly weather forecasts through Open-Meteo
+- Wind, rain, and snowfall risk calculations
+- Truck-load-dependent wind restrictions
+- Risk mileage calculations
+- Route ranking and safety recommendations
+- A `POST /api/plan/` endpoint
+
+### Your first task: inspect the repository
+
+Before writing code, thoroughly examine the existing frontend and backend.
+
+Read the relevant source files, including:
+
+- `frontend/package.json`
+- `frontend/src/App.jsx`
+- `frontend/src/App.css`
+- `frontend/src/index.css`
+- `frontend/vite.config.js`
+- `backend/routing/views.py`
+- `backend/routing/serializers.py`
+- `backend/routing/analysis.py`
+- `backend/routing/ranking.py`
+- `backend/routing/risk.py`
+- `backend/routing/weather.py`
+- `backend/routing/geometry.py`
+- `backend/routing/urls.py`
+- `backend/config/urls.py`
+
+Determine the actual API contract from the code instead of assuming it matches this prompt perfectly.
+
+Preserve working functionality. Do not replace the existing Django application or rewrite the backend unnecessarily.
+
+## 2. Primary objective
+
+Build a complete, polished, responsive **Weather-Aware Truck Route Planning Dashboard**.
+
+The user must be able to:
+
+1. Enter an origin.
+2. Enter a destination.
+3. Select departure date and time.
+4. Enter truck load weight in pounds.
+5. Select a weather checkpoint interval.
+6. Request a route analysis.
+7. See all available truck routes on an interactive map.
+8. See the safest recommended route highlighted.
+9. Compare route distance, travel duration, average weather risk, Severe miles, High miles, and No Travel miles.
+10. Inspect individual weather checkpoints.
+11. Visualize risk along the road using colored route segments.
+12. Explore forecasted weather risk using a **0–48-hour interactive heatmap slider**.
+13. Switch between routes without unnecessarily repeating API requests.
+14. Understand why a particular route was recommended.
+15. Receive useful feedback when a route or forecast is unavailable.
+
+Everything must be genuinely functional and connected to real application data.
+
+## 3. Technology requirements
+
+Use:
+
+- React
+- Vite
+- JavaScript or JSX, consistent with the existing repository
+- MapLibre GL JS
+- OpenFreeMap
+- Django REST Framework API
+- Modern, maintainable CSS or a lightweight styling approach
+
+You may install additional free, actively maintained packages when they meaningfully improve the application.
+
+Do not introduce paid APIs, API keys requiring a credit card, unnecessary subscriptions, or heavy dependencies.
+
+Do not expose backend API secrets in frontend code.
+
+Follow the project's existing package-management conventions.
+
+## 4. UI/UX design direction
+
+I want a visually impressive, professional interface suitable for a technical product demonstration.
+
+Design inspiration:
+
+- Modern fleet-management dashboards
+- Enterprise logistics software
+- Premium geospatial intelligence applications
+- Contemporary SaaS analytics dashboards
+
+The result should look like a finished commercial product, not a generic React tutorial.
+
+### Visual direction
+
+- Professional dark navy or slate sidebar
+- Light, legible map presentation
+- Strong visual hierarchy
+- Refined typography
+- Well-spaced inputs and controls
+- High-quality route comparison cards
+- Consistent iconography
+- Clear weather-risk colors
+- Subtle hover and selection states
+- Smooth, purposeful animations
+- Modern loading skeletons and progress feedback
+- Accessible contrast and readable data labels
+
+Avoid excessive gradients, decorative clutter, and unnecessary animation.
+
+### Desktop layout
+
+Use a dashboard layout with:
+
+**Left panel:** Trip-planning form and route comparison.
+
+**Main area:** Large interactive MapLibre map.
+
+**Map overlays:** Risk legend, map mode controls, route details, and forecast timeline.
+
+**Optional details panel:** Selected route or checkpoint information, when appropriate.
+
+The map should remain the primary visual focus.
+
+### Responsive layout
+
+Support desktop, laptop, tablet, and mobile.
+
+On smaller screens, use a collapsible or bottom-sheet-style panel so the map remains usable.
+
+Ensure there is no horizontal overflow, overlapping controls, clipped text, or inaccessible functionality.
+
+## 5. Trip-planning form
+
+Build a complete form containing:
+
+- Origin
+- Destination
+- Departure date
+- Departure time
+- Truck load weight (lb)
+- Checkpoint interval: 10, 25, or 50 miles
+- Find Safest Route button
+
+Requirements:
+
+- Prefill sensible sample values, such as Chicago to Detroit, for demonstration.
+- Validate all fields before sending requests.
+- Prevent negative or invalid truck weights.
+- Validate dates and departure times against available forecast coverage.
+- Handle timezones correctly; do not silently treat the browser timezone as the origin timezone without explaining that choice.
+- Disable repeated submission while a request is running.
+- Display useful errors from Django.
+- Support changing inputs and recalculating routes.
+- Preserve the previous successful result if a new request fails, unless clearing it is explicitly appropriate.
+- Use semantic labels and accessible form controls.
+
+## 6. Django API integration
+
+The existing endpoint is expected to be:
+
+`POST /api/plan/`
+
+Expected request structure:
+
+```json
+{
+  "origin": "Chicago, Illinois, USA",
+  "destination": "Detroit, Michigan, USA",
+  "departure_time": "2026-11-15T14:00:00Z",
+  "load_weight": 42000,
+  "checkpoint_interval": 25
+}
+```
+
+The response is expected to resemble:
+
+```json
+{
+  "recommended_route_id": 3,
+  "routes": [
+    {
+      "route_id": 1,
+      "distance_miles": 290.21,
+      "duration_seconds": 17974,
+      "geometry": [
+        [-87.6298, 41.8781],
+        [-87.5601, 41.5777]
+      ],
+      "checkpoints": [
+        {
+          "mile": 25,
+          "lat": 41.5777,
+          "lon": -87.5601,
+          "eta": "2026-11-15T14:25:00+00:00",
+          "weather": {
+            "forecast_time": "2026-11-15T15:00:00+00:00",
+            "wind_mph": 12.5,
+            "rain_in_per_hr": 0.12,
+            "snow_in_per_hr": 0
+          },
+          "risk": {
+            "wind_risk": "Low",
+            "rain_risk": "Moderate",
+            "snow_risk": "Low",
+            "overall_risk": "Moderate"
+          }
+        }
+      ]
+    }
+  ],
+  "ranking": [],
+  "excluded_routes": []
+}
+```
+
+This is an illustrative response. Inspect the actual backend and adapt your implementation to its real structure.
+
+Create a reusable API layer.
+
+Requirements:
+
+- Centralized API configuration
+- Development proxy to Django
+- Configurable production backend URL
+- Proper loading and error handling
+- Request cancellation where appropriate
+- Prevention of stale responses overwriting newer results
+- Safe handling of non-JSON server errors
+- No hardcoded response data in production components
+
+Do not place all API logic in `App.jsx`.
+
+## 7. Interactive routing map
+
+Build a robust MapLibre map.
+
+Requirements:
+
+- OpenFreeMap base map
+- Display every returned route
+- Draw actual GeoJSON LineStrings using backend geometry
+- Correct longitude/latitude coordinate ordering
+- Distinct route colors
+- Recommended route visually emphasized
+- Nonrecommended alternatives clearly visible
+- Excluded routes clearly identified
+- Route selection through both map and sidebar
+- Hover states and useful route details
+- Automatically fit the map to the relevant route geometries
+- Preserve useful map interaction
+- Show origin and destination markers
+- Add navigation and zoom controls
+- Provide a clear route legend
+
+Optimize rendering for routes containing thousands of GPS coordinates.
+
+Do not create a DOM marker for every GPS point. Use GeoJSON sources and MapLibre layers for line rendering.
+
+Manage map lifecycle and event cleanup correctly.
+
+Ensure the application works under React Strict Mode.
+
+## 8. Route comparison and recommendation
+
+Build a professional comparison interface.
+
+For each route display:
+
+- Route number or label
+- Distance in miles
+- Estimated travel time
+- Severe miles
+- High miles
+- Moderate miles, if useful
+- Average risk score
+- No Travel miles
+- Recommendation status
+- Selection state
+
+The backend ranking priority is:
+
+1. Fewest Severe miles
+2. Fewest High miles
+3. Lowest average risk
+4. Shortest travel time
+
+Routes containing No Travel sections are excluded from safe recommendations.
+
+Never describe an excluded route as safe.
+
+If no safe route exists, display a prominent but measured warning explaining that the application cannot recommend any of the returned routes.
+
+Provide a concise explanation of why the recommended route ranks first.
+
+Use backend-computed rankings rather than creating an inconsistent frontend ranking algorithm.
+
+## 9. Weather checkpoint visualization
+
+Display weather checkpoints along the selected route.
+
+The user must be able to click or select a checkpoint and see:
+
+- Mile marker
+- Latitude and longitude
+- Estimated truck arrival time
+- Forecast timestamp
+- Wind speed (mph)
+- Rain intensity (in/hr)
+- Snowfall intensity (in/hr)
+- Wind-specific risk
+- Rain-specific risk
+- Snow-specific risk
+- Overall checkpoint risk
+
+Risk colors must be consistent throughout the application:
+
+- Low: green
+- Moderate: yellow
+- High: orange
+- Severe: red
+- No Travel: dark red
+
+Use accessible popups, tooltips or a details panel.
+
+Avoid overwhelming the map with too many overlapping markers. Consider displaying checkpoints only for the selected route, and use an efficient presentation appropriate to zoom level.
+
+Display timestamps and units clearly.
+
+## 10. Risk-colored road segments
+
+This is a major feature.
+
+Instead of drawing only a uniformly colored route, provide a **Weather Risk View** that colors road segments according to their estimated risk.
+
+The existing backend calculates risk at checkpoints.
+
+Its mileage-classification approach assigns each interval the higher risk of its two endpoint checkpoints.
+
+Use that same documented rule when displaying the corresponding road segments, unless you implement an explicitly coordinated backend improvement.
+
+Requirements:
+
+- Split or style route geometry according to checkpoint mileage positions.
+- Match risk segment boundaries to the route's actual geometry as accurately as possible.
+- Preserve the backend's distance-scaling convention.
+- Avoid treating coordinate array indices as distances.
+- Use appropriate risk colors.
+- Allow switching between a route-comparison view and a weather-risk view.
+- Clearly distinguish estimated segment risk from measured weather at individual checkpoints.
+- Provide a legend for the five risk categories.
+
+Prefer clean, efficient GeoJSON layers over large quantities of HTML elements.
+
+## 11. Interactive 0–48-hour weather forecast heatmap
+
+**This is a required assessment feature, not an optional enhancement.**
+
+Create a functional weather-risk visualization along the route corridor with a forecast-time slider.
+
+The user should be able to:
+
+- Move a slider from hour 0 through hour 48.
+- See the selected forecast timestamp.
+- See weather-risk visualization update along the route corridor.
+- Play and pause the forecast animation.
+- Step forward and backward through forecast hours.
+- Switch between routes.
+- Understand the color scale.
+- Inspect the conditions at a location for the selected forecast hour.
+
+Important distinction:
+
+The existing `/api/plan/` endpoint calculates checkpoint risk **at the truck's ETA**.
+
+That is not enough to produce a legitimate 48-hour forecast animation.
+
+**Do not fabricate hourly forecasts, repeatedly display the same ETA weather, or interpolate risk values across unrelated hours merely to make the slider look functional.**
+
+Inspect the existing weather service.
+
+If the backend does not expose hourly forecast data needed for the heatmap, implement the smallest maintainable backend extension necessary.
+
+You may create a dedicated endpoint or extend the existing API response, whichever best fits the architecture.
+
+Requirements:
+
+- Use actual Open-Meteo hourly forecasts.
+- Retrieve weather at the appropriate geographical sampling points.
+- Use the existing wind, rain, snow and truck-load risk rules.
+- Reuse the existing risk engine wherever practical.
+- Cover the requested 0–48-hour forecast window when available.
+- Correctly handle UTC timestamps and forecast boundaries.
+- Make the forecast time basis explicit.
+- Avoid duplicate rain/showers accounting; verify the Open-Meteo variable definitions.
+- Display missing/unavailable forecast periods clearly.
+- Avoid excessive requests when sliding between forecast hours.
+- Prefer fetching and caching hourly time series once, then changing the displayed hour locally.
+- Batch geographical requests where supported and appropriate.
+- Use loading and error states rather than fake data.
+
+The visualization should be visually useful: risk-colored corridor segments or a geospatial risk heat overlay aligned with the truck route, with a professional forecast timeline.
+
+Do not substitute a decorative static gradient for the required functional heatmap.
+
+## 12. Performance and reliability
+
+The application should remain responsive when analyzing and displaying real routes.
+
+Priorities:
+
+- Avoid unnecessary React rerenders.
+- Reuse MapLibre map instances.
+- Update map sources efficiently.
+- Memoize expensive derived geometry.
+- Remove unused event listeners and popups.
+- Avoid duplicating weather requests.
+- Cache reusable data where appropriate.
+- Handle API failures gracefully.
+- Protect against invalid or missing geometry.
+- Avoid overlapping simultaneous submissions.
+- Handle a route response containing fewer than three alternatives.
+- Handle an empty recommendation.
+- Handle missing forecast data.
+- Support reasonable loading times on a free-tier backend.
+
+If the backend is too slow, investigate and improve the relevant bottleneck rather than simply showing an indefinite spinner.
+
+## 13. Code architecture
+
+Use a maintainable project structure.
+
+A reasonable starting point is:
+
+```text
+frontend/
+  src/
+    api/
+      routingApi.js
+    components/
+      TripForm.jsx
+      RouteCard.jsx
+      RouteComparison.jsx
+      RouteMap.jsx
+      CheckpointPopup.jsx
+      WeatherLegend.jsx
+      ForecastTimeline.jsx
+      LoadingState.jsx
+    hooks/
+      useTripPlanner.js
+    utils/
+      geo.js
+      formatters.js
+      riskColors.js
+    App.jsx
+    App.css
+    index.css
+    main.jsx
+```
+
+You may improve this architecture based on what already exists.
+
+Avoid one enormous `App.jsx` containing all styling, data transformation, API requests, form handling and MapLibre logic.
+
+Use reusable components and small, clearly named functions.
+
+Write clean, readable, documented code.
+
+## 14. Testing and verification
+
+Do not stop after writing the code.
+
+Actually run the available checks and fix failures.
+
+At minimum:
+
+1. Install required frontend dependencies.
+2. Verify the development server starts.
+3. Verify `npm run build` completes successfully.
+4. Run linting and fix meaningful issues.
+5. Add useful automated tests.
+6. Test form validation.
+7. Test API response handling.
+8. Test route comparison rendering.
+9. Test recommended-route selection.
+10. Test No Travel behavior.
+11. Test risk color mapping.
+12. Test forecast-time selection.
+13. Test behavior when the backend fails.
+14. Test missing or malformed API data.
+15. Check for memory leaks or incorrect MapLibre cleanup.
+
+Use Vitest and React Testing Library if suitable.
+
+If browser automation is available, test the application in an actual browser at desktop and mobile viewport sizes.
+
+If any test cannot be performed because of unavailable infrastructure, state that limitation explicitly. Never claim tests passed unless you actually ran them.
+
+## 15. Backend changes
+
+You are authorized to make **minimal, necessary backend changes** to support the complete frontend.
+
+Examples:
+
+- Exposing actual hourly forecast series for the heatmap
+- Returning additional route metadata
+- Improving response performance
+- Implementing weather-request batching or caching
+- Fixing proven frontend/backend contract mismatches
+
+However:
+
+- Do not rewrite the routing engine.
+- Do not replace Valhalla.
+- Do not change the route-ranking priorities.
+- Do not alter the weather-risk thresholds without justification.
+- Do not remove existing backend functionality.
+- Do not expose API credentials.
+- Preserve the existing tests and add tests for any modified functionality.
+
+Treat the Django backend as the source of truth for route risk and recommendations.
+
+## 16. Documentation and final delivery
+
+Update the project documentation with:
+
+- Frontend installation instructions
+- Required Node.js version
+- Development commands
+- Backend integration instructions
+- Environment variable configuration
+- Explanation of the map modes
+- Explanation of the forecast slider
+- Description of important assumptions
+- Testing instructions
+- Production build instructions
+- Known limitations, if any
+
+Include appropriate OpenStreetMap/OpenFreeMap attribution.
+
+Ensure the project can be run from the repository root using documented steps.
+
+Do not commit secrets, virtual environments, generated build output, or unnecessary files.
+
+## 17. Acceptance criteria
+
+The task is complete only when:
+
+- The frontend loads successfully.
+- Users can plan a trip through the form.
+- The Django API integration works.
+- Available routes display correctly on MapLibre.
+- The backend's recommended route is highlighted.
+- Users can inspect individual route details.
+- Users can inspect weather checkpoints.
+- Risk-colored road segments are displayed.
+- A functional 0–48-hour forecast heatmap is implemented using real forecast data.
+- No Travel conditions are clearly indicated.
+- Loading, validation and error states work.
+- The layout works across desktop and mobile.
+- The application builds successfully.
+- Automated checks pass.
+- Documentation is updated.
+
+## 18. Working instructions
+
+Proceed autonomously.
+
+First inspect the repository and identify what's already implemented. Then implement the missing functionality in a sensible order.
+
+Do not ask me for routine implementation decisions. Make professional engineering decisions based on the existing architecture and this specification.
+
+Do not stop after completing one component or return a collection of proposed steps. Your assignment is to **implement the complete frontend**.
+
+Avoid breaking existing backend behavior.
+
+Where an external dependency or credential blocks a live integration test, implement everything possible, use clearly labeled test fixtures where necessary, and document the exact limitation.
+
+When finished, provide:
+
+1. Summary of functionality implemented.
+2. Files created or modified.
+3. Backend changes, if any.
+4. Commands and tests actually executed, with results.
+5. Instructions to launch the completed application.
+6. Any remaining limitations.
+
+**Final objective: a working, visually polished, technically credible Weather-Aware Truck Routing application that is ready for a Full Stack Developer assessment demonstration.**
+
+Begin by inspecting the repository, then implement and test the solution.

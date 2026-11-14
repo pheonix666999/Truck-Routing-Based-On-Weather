@@ -12,6 +12,7 @@ __pycache__/
 
 # Django local database
 db.sqlite3
+staticfiles/
 
 # Frontend
 node_modules/

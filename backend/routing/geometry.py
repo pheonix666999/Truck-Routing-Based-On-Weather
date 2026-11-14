@@ -92,5 +92,4 @@ def generate_check_points(coordinates, interval_miles, route_distance_miles):
 
         }
     )
-    print(checkpoints)
     return checkpoints
