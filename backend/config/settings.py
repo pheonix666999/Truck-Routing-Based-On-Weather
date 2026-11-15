@@ -22,8 +22,8 @@ load_dotenv(BASE_DIR / ".env")
 SIMPLE_ROUTING_API_KEY = os.getenv("SIMPLE_ROUTING_API_KEY")
 NOMINATIM_USER_AGENT = os.getenv("NOMINATIM_USER_AGENT")
 
-# Production-safe defaults. Local development must explicitly enable debug.
-DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() in {"1", "true", "yes", "on"}
+# Local development works without extra settings; production must disable debug.
+DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in {"1", "true", "yes", "on"}
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
     if DEBUG:
@@ -145,6 +145,10 @@ STORAGES = {
 }
 
 CORS_ALLOWED_ORIGINS = [
+    # Local React development
     "http://localhost:5173",
-    "http://127.0.0.1:5173"
+    "http://127.0.0.1:5173",
+
+    # Production React frontend on Cloudflare Pages
+    "https://truck-routing-based-on-weather.pages.dev",
 ]

@@ -256,7 +256,7 @@ Current verification result: 15 frontend tests, 14 Django tests, all determinist
 Before deploying Django:
 
 - Set `DJANGO_SECRET_KEY` to a long, unique, unpredictable value.
-- Set `DJANGO_DEBUG=False` or leave it unset; production defaults to `False`.
+- Set `DJANGO_DEBUG=False`; local development defaults to `True`.
 - Set `DJANGO_ALLOWED_HOSTS` to a comma-separated list of deployed hostnames.
 - Configure trusted origins when required by the hosting environment.
 - Serve Django with a production WSGI or ASGI server.
