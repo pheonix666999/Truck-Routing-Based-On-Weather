@@ -11,6 +11,7 @@ import RouteCard from "./components/RouteCard";
 import RouteMap from "./components/RouteMap";
 import ForecastTimeline from "./components/ForecastTimeline";
 import CheckpointDetails from "./components/CheckpointDetails";
+import ServerStatus from "./components/ServerStatus";
 import { riskColors, number } from "./utils/geo";
 import "./App.css";
 const emptyRoutes = [];
@@ -36,6 +37,7 @@ export default function App() {
           </span>
           Weather<span>Route</span>
         </a>
+        <ServerStatus />
       </header>
       <div className={`workspace-layout ${collapsed ? "collapsed" : ""}`}>
         <aside className="sidebar">

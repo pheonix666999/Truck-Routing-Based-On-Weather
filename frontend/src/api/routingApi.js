@@ -1,7 +1,36 @@
 const base = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
+export async function fetchWithTimeout(url, options = {}, timeout = 90000) {
+  const controller = new AbortController();
+  const cancel = () => controller.abort();
+  options.signal?.addEventListener("abort", cancel, { once: true });
+  if (options.signal?.aborted) cancel();
+  const timer = setTimeout(cancel, timeout);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted && !options.signal?.aborted)
+      throw new Error("The server took too long to respond. Please try again.");
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    options.signal?.removeEventListener("abort", cancel);
+  }
+}
+
+export async function checkServer(signal) {
+  const response = await fetchWithTimeout(
+    `${base}/api/health/`,
+    { signal, cache: "no-store" },
+    20000,
+  );
+  if (!response.ok) throw new Error(`Server returned ${response.status}`);
+  const data = await response.json().catch(() => null);
+  if (data?.status !== "ok") throw new Error("Invalid health response");
+}
+
 export async function searchLocations(query, signal) {
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `${base}/api/locations/?q=${encodeURIComponent(query)}`,
     { signal },
   );
@@ -13,7 +42,7 @@ export async function searchLocations(query, signal) {
 
 export async function checkLocationCoverage(latitude, longitude, signal) {
   const params = new URLSearchParams({ lat: latitude, lon: longitude });
-  const response = await fetch(`${base}/api/coverage/?${params}`, { signal });
+  const response = await fetchWithTimeout(`${base}/api/coverage/?${params}`, { signal });
   const data = await response.json().catch(() => null);
   if (!response.ok)
     throw new Error(data?.error || "Routing coverage could not be verified.");
@@ -48,12 +77,12 @@ export function validateTrip(trip) {
   };
 }
 export async function planTrip(trip, signal) {
-  const response = await fetch(`${base}/api/plan/`, {
+  const response = await fetchWithTimeout(`${base}/api/plan/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(trip),
     signal,
-  });
+  }, 180000);
   const data = await response.json().catch(() => null);
   if (!response.ok)
     throw new Error(

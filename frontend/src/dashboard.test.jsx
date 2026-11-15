@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 import React from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import {
   checkLocationCoverage,
+  checkServer,
+  fetchWithTimeout,
   validateTrip,
   planTrip,
   searchLocations,
@@ -14,6 +16,7 @@ import RouteCard from "./components/RouteCard";
 import ForecastTimeline from "./components/ForecastTimeline";
 import TripForm from "./components/TripForm";
 import App from "./App";
+import ServerStatus from "./components/ServerStatus";
 vi.mock("./components/RouteMap", () => ({ default: () => <div>Map</div> }));
 afterEach(() => {
   cleanup();
@@ -51,6 +54,28 @@ const mockResponse = (value, ok = true) =>
     vi.fn().mockResolvedValue({ ok, status: 502, json: async () => value }),
   );
 describe("trip planning", () => {
+  it("accepts a healthy server and rejects non-JSON health responses", async () => {
+    mockResponse({ status: "ok" });
+    await expect(checkServer()).resolves.toBeUndefined();
+    expect(fetch).toHaveBeenCalledWith("/api/health/", expect.objectContaining({ cache: "no-store" }));
+    mockResponse(null);
+    await expect(checkServer()).rejects.toThrow("Invalid health response");
+  });
+  it("shows ready after one startup health request", async () => {
+    mockResponse({ status: "ok" });
+    render(<ServerStatus />);
+    await waitFor(() => expect(screen.getByText("Ready")).toBeInTheDocument());
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it("cancels a request when its caller cancels", async () => {
+    const controller = new AbortController();
+    vi.stubGlobal("fetch", vi.fn((_, options) => new Promise((_, reject) => {
+      options.signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+    })));
+    const pending = fetchWithTimeout("/api/health/", { signal: controller.signal });
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+  });
   it("validates inputs and preserves explicit UTC", () => {
     expect(validateTrip(trip).departure_time).toBe(trip.departure_time);
     for (const patch of [
@@ -73,7 +98,7 @@ describe("trip planning", () => {
     ]);
     expect(fetch).toHaveBeenCalledWith(
       "/api/locations/?q=Lahore%2C%20PK",
-      expect.objectContaining({ signal: undefined }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });
   it("checks routing coverage for selected coordinates", async () => {
@@ -81,7 +106,7 @@ describe("trip planning", () => {
     await expect(checkLocationCoverage(31.558, 74.35071)).resolves.toBe(false);
     expect(fetch).toHaveBeenCalledWith(
       "/api/coverage/?lat=31.558&lon=74.35071",
-      { signal: undefined },
+      { signal: expect.any(AbortSignal) },
     );
   });
   it("rejects malformed and empty route data", async () => {

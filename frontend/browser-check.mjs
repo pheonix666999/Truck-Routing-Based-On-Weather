@@ -74,6 +74,7 @@ const planPayloads = [];
 let locationCalls = 0;
 let coverageCalls = 0;
 let coverageResult = true;
+await page.route("**/api/health/", (r) => r.fulfill({ json: { status: "ok" } }));
 await page.route("**/api/locations/**", (r) => {
   locationCalls++;
   return r.fulfill({

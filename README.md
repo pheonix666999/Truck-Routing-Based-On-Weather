@@ -29,6 +29,7 @@ The application is designed to help dispatchers answer a practical question: **w
 - Detailed checkpoint conditions and risk breakdowns.
 - Responsive planning panel and map layout for desktop, tablet, and mobile screens.
 - Structured validation and service-error messages while preserving the previous successful result.
+- Startup server status for hosted backends, with bounded wake retries and a manual retry action. Route analysis allows up to three minutes for slow provider responses.
 
 ## How route analysis works
 
@@ -252,6 +253,8 @@ Current verification result: 15 frontend tests, 14 Django tests, all determinist
 ## Production configuration
 
 `VITE_API_BASE_URL` can point the frontend build to a separately hosted backend. Leave it unset when the frontend and API share an origin or a reverse proxy handles `/api`.
+
+For the Render backend, set `VITE_API_BASE_URL=https://truck-weather-routing-api-zisw.onrender.com` in the frontend build environment. The frontend checks `/api/health/` once at startup, retries only while waking (for up to about 2½ minutes), and never sends periodic keep-alive traffic. The status indicator offers a manual retry if the server remains unavailable. Configure Django CORS to allow the deployed frontend origin.
 
 Before deploying Django:
 
