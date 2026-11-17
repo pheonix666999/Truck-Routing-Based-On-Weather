@@ -9,8 +9,8 @@ The application is designed to help dispatchers answer a practical question: **w
 | Deliverable | Link |
 | --- | --- |
 | Source repository | [Truck Routing Based On Weather](https://github.com/pheonix666999/Truck-Routing-Based-On-Weather) |
-| Live application | Add the deployed application URL before submission |
-| Video walkthrough | Add the 5–10 minute Loom URL before submission |
+| Live application | [WeatherRoute](https://truck-routing-based-on-weather.pages.dev/) |
+| Video walkthrough | [Loom video](https://www.loom.com/share/e4e6a73653ae498cadd6d937e7eee877) |
 
 ## Features
 
